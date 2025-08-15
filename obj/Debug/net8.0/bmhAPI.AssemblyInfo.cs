@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("bmhAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+172c50f0b2d420efde5d5bbf8f2359417b32a1e5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+90acb8800a7e31358e6d159977d3dc92ca3d9fc2")]
 [assembly: System.Reflection.AssemblyProductAttribute("bmhAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("bmhAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
