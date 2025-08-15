@@ -15,6 +15,8 @@ var connectionName = builder.Environment.IsDevelopment()
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString(connectionName)));
 
+builder.Services.AddScoped<HostelService>();
+
 // 3️⃣ Add Controllers
 builder.Services.AddControllers();
 
