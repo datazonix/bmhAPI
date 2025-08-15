@@ -1,0 +1,6 @@
+@bmhAPI_HostAddress = http://localhost:5234
+
+GET {{bmhAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
