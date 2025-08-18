@@ -1,8 +1,8 @@
+using bmhAPI;
 using bmhAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using static bmhAPI.Data.ApplicationDbContext;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,16 +15,18 @@ var connectionName = builder.Environment.IsDevelopment()
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString(connectionName)));
 
-builder.Services.AddScoped<HostelService>();
+// 3️⃣ Register custom services via ConfiguredServices
+ConfiguredServices.Register(builder.Services);
 
-// 3️⃣ Add Controllers
+// 4️⃣ Add Controllers
 builder.Services.AddControllers();
 
-// 4️⃣ Add Swagger
+// 5️⃣ Add Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-/*// 5️⃣ (Optional) Add JWT Authentication
+/*
+// 6️⃣ (Optional) Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
@@ -42,9 +44,10 @@ builder.Services.AddAuthentication("Bearer")
         };
     });
 */
+
 var app = builder.Build();
 
-// 6️⃣ Configure Middleware
+// 7️⃣ Configure Middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -53,9 +56,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthentication(); // 🔹 Add this if using JWT
+// Uncomment the following line only if JWT Authentication is enabled
+// app.UseAuthentication();
+
 app.UseAuthorization();
 
+// 8️⃣ Map Controllers
 app.MapControllers();
 
 app.Run();

@@ -16,42 +16,45 @@ namespace bmhAPI.Services
             _env = env;
         }
 
-        public List<Dictionary<string, object>> ExecuteStoredProcedure(string procedureName, JsonElement parameters)
+        public List<Dictionary<string, object?>> ExecuteStoredProcedure(string procedureName, JsonElement parameters)
         {
             // Choose connection string based on environment
             var connectionString = _env.IsDevelopment()
                 ? _configuration.GetConnectionString("LocalConnection")
                 : _configuration.GetConnectionString("RemoteConnection");
 
-            var result = new List<Dictionary<string, object>>();
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException("Database connection string is not configured.");
+            }
+
+            var result = new List<Dictionary<string, object?>>();
 
             using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlCommand cmd = new SqlCommand(procedureName, conn))
             {
-                using (SqlCommand cmd = new SqlCommand(procedureName, conn))
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                // Add parameters from incoming JSON
+                foreach (var prop in parameters.EnumerateObject())
                 {
-                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@" + prop.Name,
+                        prop.Value.ValueKind == JsonValueKind.Null
+                            ? DBNull.Value
+                            : prop.Value.ToString());
+                }
 
-                    // Add parameters from incoming JSON
-                    foreach (var prop in parameters.EnumerateObject())
+                conn.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
                     {
-                        cmd.Parameters.AddWithValue("@" + prop.Name,
-                            prop.Value.ValueKind == JsonValueKind.Null
-                                ? DBNull.Value
-                                : prop.Value.ToString());
-                    }
-
-                    conn.Open();
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
+                        var row = new Dictionary<string, object?>();
+                        for (int i = 0; i < reader.FieldCount; i++)
                         {
-                            var row = new Dictionary<string, object>();
-                            for (int i = 0; i < reader.FieldCount; i++)
-                            {
-                                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                            }
-                            result.Add(row);
+                            row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
                         }
+                        result.Add(row);
                     }
                 }
             }

@@ -1,61 +1,62 @@
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 using System.Data;
+using Microsoft.Data.SqlClient;
 
-namespace bmhAPI.Services
+public class DBExecutor
 {
-    public class DBExecutor
+    private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _env;
+
+    public DBExecutor(IConfiguration configuration, IWebHostEnvironment env)
     {
-        private readonly IConfiguration _configuration;
-        private readonly IWebHostEnvironment _env;
+        _configuration = configuration;
+        _env = env;
+    }
 
-        public DBExecutor(IConfiguration configuration, IWebHostEnvironment env)
+    private string GetConnectionString()
+    {
+        string? connectionString = _env.IsDevelopment()
+            ? _configuration.GetConnectionString("LocalConnection")
+            : _configuration.GetConnectionString("RemoteConnection");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException("Database connection string is not configured.");
+
+        return connectionString;
+    }
+
+    // New ExecuteReader method
+    public List<Dictionary<string, object?>> ExecuteReader(string storedProcedure, string[] paramNames, object?[] paramValues)
+    {
+        if (paramNames.Length != paramValues.Length)
+            throw new ArgumentException("Parameter names and values count mismatch.");
+
+        var result = new List<Dictionary<string, object?>>();
+
+        using var conn = new SqlConnection(GetConnectionString());
+        using var cmd = new SqlCommand(storedProcedure, conn)
         {
-            _configuration = configuration;
-            _env = env;
+            CommandType = CommandType.StoredProcedure
+        };
+
+        // Add parameters
+        for (int i = 0; i < paramNames.Length; i++)
+        {
+            cmd.Parameters.Add(paramNames[i], SqlDbType.VarChar).Value =
+                paramValues[i] ?? DBNull.Value;
         }
 
-        private string GetConnectionString()
+        conn.Open();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
         {
-            return _env.IsDevelopment()
-                ? _configuration.GetConnectionString("LocalConnection")
-                : _configuration.GetConnectionString("RemoteConnection");
-        }
-
-        public bool ExecuteNonQuery(SqlCommand cmd)
-        {
-            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
+            var row = new Dictionary<string, object?>();
+            for (int i = 0; i < reader.FieldCount; i++)
             {
-                cmd.Connection = conn;
-                conn.Open();
-                return cmd.ExecuteNonQuery() > 0;
+                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
             }
+            result.Add(row);
         }
 
-        public List<Dictionary<string, object>> ExecuteReader(SqlCommand cmd)
-        {
-            var result = new List<Dictionary<string, object>>();
-
-            using (SqlConnection conn = new SqlConnection(GetConnectionString()))
-            {
-                cmd.Connection = conn;
-                conn.Open();
-
-                using (SqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        var row = new Dictionary<string, object>();
-                        for (int i = 0; i < reader.FieldCount; i++)
-                        {
-                            row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                        }
-                        result.Add(row);
-                    }
-                }
-            }
-
-            return result;
-        }
+        return result;
     }
 }
